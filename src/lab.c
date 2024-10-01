@@ -17,11 +17,11 @@ static struct job job_list[MAX_JOBS];
 static int job_count = 0;
 
 void handle_signals() {
-    signal(SIGINT, SIG_DFL);
-    signal(SIGQUIT, SIG_DFL);
-    signal(SIGTSTP, SIG_DFL);
-    signal(SIGTTIN, SIG_DFL);
-    signal(SIGTTOU, SIG_DFL);
+    signal(SIGINT, SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
 }
 
 // Task 5: Get shell prompt, return default if env variable is not set
@@ -72,7 +72,6 @@ char **cmd_parse(char const *line) {
         token = strtok(NULL, " ");
     }
     args[index] = NULL; 
-
     free(input_copy); 
     return args; 
 }
@@ -91,7 +90,6 @@ bool do_builtin(struct shell *sh, char **argv) {
     if (argv[0] == NULL) {
         return false;
     }
-
     if (strcmp(argv[0], "exit") == 0) {
         sh_destroy(sh);
         exit(0);
@@ -105,23 +103,18 @@ bool do_builtin(struct shell *sh, char **argv) {
         print_jobs();
         return true;
     }
-
     return false;
 }
 
 // Task 3: Trim whitespace from the input line
 char *trim_white(char *line) {
     char *end;
-
     while (isspace((unsigned char) *line)) line++;
-
     if (*line == 0) {
         return line;
     }
-
     end = line + strlen(line) - 1;
     while (end > line && isspace((unsigned char) *end)) end--;
-
     *(end + 1) = '\0';
     return line;
 }
@@ -157,7 +150,6 @@ int change_dir(char **args) {
             return -1;
         }
     }
-
     return 0;
 }
 
@@ -194,7 +186,6 @@ void update_jobs() {
     }
 }
 struct job background_jobs[256]; // Array to track background jobs
-
 // Add a new background job
 void add_background_job(pid_t pid, const char *command) {
     background_jobs[job_count].job_id = job_count + 1;
@@ -210,7 +201,6 @@ void print_jobs() {
         pid_t result = waitpid(background_jobs[i].pid, &status, WNOHANG);
         if (result > 0) {
             printf("[%d] Done %s\n", background_jobs[i].job_id, background_jobs[i].command);
-            // Remove completed job
             for (int j = i; j < job_count - 1; j++) {
                 background_jobs[j] = background_jobs[j + 1];
             }
@@ -219,12 +209,12 @@ void print_jobs() {
         }
     }
 }
-
 // Modify the existing command execution logic
 void execute_command(char *command) {
     pid_t pid = fork();
     if (pid == 0) {
         // Child process
+        handle_signals();
         char *args[ARG_MAX]; // Assuming ARG_MAX is defined in lab.h
         char *token = strtok(command, " ");
         int i = 0;
@@ -256,5 +246,3 @@ void execute_command(char *command) {
 void print_version() {
     printf("Shell version: %d.%d\n", lab_VERSION_MAJOR, lab_VERSION_MINOR);
 }
-
-

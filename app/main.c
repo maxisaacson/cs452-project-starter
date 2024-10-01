@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     struct shell sh;
     sh_init(&sh);  // Initialize the shell
 
+    handle_signals();
     while ((opt = getopt(argc, argv, "v")) != -1) {
         switch (opt) {
             case 'v':
@@ -30,7 +31,6 @@ int main(int argc, char **argv) {
                 return 1;        
         }
     }
-
     char *line;
     char *prompt;
 
@@ -42,7 +42,6 @@ int main(int argc, char **argv) {
         if (!line) {
             break; // EOF
         }
-
         char *trimmed_line = trim_white(line);
 
         if (strlen(trimmed_line) > 0) {
@@ -53,11 +52,9 @@ int main(int argc, char **argv) {
             }
             cmd_free(parsed_args); // Free the parsed arguments
         }
-
         free(line);  // Only free `line` after `trimmed_line` is done
         update_jobs();  
     }
-
 
     sh_destroy(&sh); 
     return 0;
