@@ -16,6 +16,14 @@
 static struct job job_list[MAX_JOBS];
 static int job_count = 0;
 
+void handle_signals() {
+    signal(SIGINT, SIG_DFL);
+    signal(SIGQUIT, SIG_DFL);
+    signal(SIGTSTP, SIG_DFL);
+    signal(SIGTTIN, SIG_DFL);
+    signal(SIGTTOU, SIG_DFL);
+}
+
 // Task 5: Get shell prompt, return default if env variable is not set
 char *get_prompt(const char *env) {
     char *prompt = getenv(env);
@@ -185,53 +193,68 @@ void update_jobs() {
         }
     }
 }
+struct job background_jobs[256]; // Array to track background jobs
 
+// Add a new background job
+void add_background_job(pid_t pid, const char *command) {
+    background_jobs[job_count].job_id = job_count + 1;
+    background_jobs[job_count].pid = pid;
+    strncpy(background_jobs[job_count].command, command, sizeof(background_jobs[job_count].command) - 1);
+    job_count++;
+}
+
+// Print completed background jobs
 void print_jobs() {
     for (int i = 0; i < job_count; i++) {
-        if (job_list[i].status == 0) {
-            printf("[%d] %d Running %s &\n", job_list[i].job_id, job_list[i].pid, job_list[i].command);
-        } else {
-            printf("[%d] Done %s &\n", job_list[i].job_id, job_list[i].command);
+        int status;
+        pid_t result = waitpid(background_jobs[i].pid, &status, WNOHANG);
+        if (result > 0) {
+            printf("[%d] Done %s\n", background_jobs[i].job_id, background_jobs[i].command);
+            // Remove completed job
+            for (int j = i; j < job_count - 1; j++) {
+                background_jobs[j] = background_jobs[j + 1];
+            }
+            job_count--;
+            i--; // Adjust index after removing job
         }
     }
 }
 
+// Modify the existing command execution logic
 void execute_command(char *command) {
     pid_t pid = fork();
-    
     if (pid == 0) {
-        handle_signals();
-
-        char *args[ARG_MAX];
+        // Child process
+        char *args[ARG_MAX]; // Assuming ARG_MAX is defined in lab.h
         char *token = strtok(command, " ");
         int i = 0;
-
-        while (token != NULL && i < ARG_MAX - 1) {
+        while (token != NULL) {
             args[i++] = token;
             token = strtok(NULL, " ");
         }
-        args[i] = NULL;
+        args[i] = NULL; // Null-terminate the arguments
 
-        if (execvp(args[0], args) == -1) {
-            perror("exec failed");
-        }
-
-        exit(1);
+        setpgid(0, 0); // Set process group
+        execvp(args[0], args); // Execute command
+        perror("exec failed"); // If execvp returns, there was an error
+        exit(EXIT_FAILURE); // Exit child process on failure
     } else if (pid > 0) {
-        add_job(pid, command);
-        update_jobs();
+        // Parent process
+        if (command[strlen(command) - 1] == '&') {
+            // Handle background job
+            command[strlen(command) - 1] = '\0'; // Remove '&'
+            add_background_job(pid, command);
+            printf("[%d] %d\n", job_count, pid); // Print job number and PID
+        } else {
+            // Wait for foreground job to complete
+            waitpid(pid, NULL, 0);
+        }
     } else {
-        perror("Fork failed");
+        perror("fork failed");
     }
 }
 void print_version() {
     printf("Shell version: %d.%d\n", lab_VERSION_MAJOR, lab_VERSION_MINOR);
 }
 
-void handle_signals() {
-    signal(SIGINT, SIG_DFL);
-    signal(SIGQUIT, SIG_DFL);
-    signal(SIGTSTP, SIG_DFL);
-    signal(SIGTTIN, SIG_DFL);
-    signal(SIGTTOU, SIG_DFL);
-}
+
