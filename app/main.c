@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <getopt.h>
 #include <time.h>
 #include <sys/time.h> /* for gettimeofday system call */
 #include "../src/lab.h"
