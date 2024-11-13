@@ -1,45 +1,53 @@
-        Max Isaacson
-        CS 452
-# Summary of Custom Shell Implementation
-Please note that these do not correlate directly to the numbered tasks given in the handout. This is to explain how different tasks were handled and grouped together (at least thats how I designed it).
-## 1. Shell Initialization
-- Upon starting, the shell sets up the necessary environment, including initializing signal handling mechanisms to manage user interrupts and background jobs.
-- It allocates data structures to store information about running jobs, which allows the shell to keep track of multiple processes and their states.
+Max Isaacson
+CS 452
+Project 3 Threads
+11/12/24
 
-## 2. Command Prompt Display
-- The shell displays a prompt (`shell>`) to indicate readiness for user input. This is done in a loop to allow continuous interaction until the shell is terminated.
-- The prompt is designed to be user-friendly and clearly indicates the shell's state, improving the overall user experience.
+# Summary of Multithreaded Mergesort
+This project is to put our skills that we have bee nlearning to the test. We must implement a thread safe solution when merging all of the threads
+## 1. Project Management
+I managed this project poorly compared to the last ones. I had a very strange apporach for this project, I worked backwards from the unit test. I first fully understood what the test was actually doing before I went to coding. This means that I had the single thread test done first, then second, and finally third. 90% of the time spent on this project was trying to get the 3rd test to pass.
 
-## 3. Command Parsing
-- User input is read as a single line and parsed into individual tokens using the `strtok` function. This process splits the input based on whitespace, allowing the shell to identify commands and their arguments.
-- The parsed tokens are stored in an array, where the first token represents the command to be executed, and subsequent tokens represent arguments.
-- Error handling is implemented to ensure that commands are processed correctly, and invalid input is managed gracefully.
+## 2. Deliverables
+``````````````````````````````````````````
+usage : ./myprogram [size] [thread_count]
+```````````````````````````````````````
+Refer to README.md for make commands
+```````````````````````````````````````
+usage : ./createplot.sh -s [size] -f [filename]
+`````````````````````````````````````````````
+There was no self-modification done to the program - it is very bare bones just so I could get it to pass the tests with the short time I had.
 
-## 4. Built-in Commands
-- The shell includes several built-in commands for essential functionality (not all shown):
-  - **`cd`**: Changes the current working directory. If no argument is provided, it defaults to the user's home directory. If the specified directory does not exist, an error message is displayed.
-  - **`jobs`**: Displays a list of all background jobs managed by the shell. It shows their process IDs and the commands associated with each job, helping users keep track of running processes.
+Please note that the bash files, analysis, and driver app image are all located in this root file
 
-## 5. Process Execution
-- When the user enters a command, the shell forks a new child process using `fork()`. This creates a separate process to execute the command without blocking the shell.
-- The child process uses `execvp` to replace its memory space with the new command, effectively running the external program.
-- If the command includes `&`, indicating it should run in the background, the parent process continues to accept new commands while the child runs in the background, allowing for concurrent operations.
+## 3. Explanations
+### Input and Configuration:
 
-## 6. Job Management
-- The shell maintains an array of job structures, each containing information about the process ID and the command executed. This data structure allows for efficient tracking and management of background jobs.
-- Functions are implemented to add, update, and display jobs, providing users with insights into the status of their background processes.
+The function mergesort_mt takes an integer array A, the array's length n, and the desired number of threads num_threads.
+num_threads is adjusted if it exceeds either the array size or a predefined MAX_THREADS limit.
 
-## 7. Signal Handling
-- The shell is designed to handle user signals effectively:
-  - For example: it ignores the `SIGINT` signal (triggered by `Ctrl+C`) to ensure that the shell does not terminate when this signal is received.
-  - Instead, the signal is forwarded to child processes, allowing them to terminate appropriately if interrupted by the user.
-- This mechanism helps maintain the shell's interactivity while ensuring that running commands can be interrupted as needed.
+### Chunk Division and Thread Assignment:
 
-## 8. Shell Cleanup
-- When the user decides to exit the shell (usually through `Ctrl+Z` or a dedicated exit command), the shell performs cleanup operations.
-- It iterates through the job list, terminating any remaining background processes to prevent orphaned processes from lingering in the system.
-- After cleaning up resources, the shell exits, providing a smooth termination experience for the user.
+The array is divided into num_threads chunks. Each chunk is roughly n / num_threads elements, with adjustments for any remainder to ensure all elements are covered.
+Each thread is assigned a specific chunk of the array to sort, and these threads are created using pthread_create.
+Each thread sorts its assigned chunk using a single-threaded mergesort algorithm.
+
+### Concurrent Sorting of Chunks:
+
+Threads operate independently to sort their respective chunks concurrently, reducing the time taken for the initial sorting phase.
+The pthread_join function waits for each thread to finish sorting its chunk before proceeding to the merging phase.
+
+### Iterative Merging of Sorted Chunks:
+
+Once all threads complete sorting, the algorithm performs an iterative, two-way merging process:
+Starting with each sorted chunk, pairs of adjacent chunks are merged into larger sorted segments.
+This doubling process repeats until the entire array is merged into one fully sorted segment.
+Merging is handled by the helper function merge_s, which merges two sorted subarrays into one in-place.
+
+### Final Sorted Array:
+
+After all merging iterations are complete, the original array A contains the sorted elements in ascending order.
 
 
-## Reflection
-This project was the hardest programming assignment I have had to complete in at least a year. Numerous problems kept coming up as I struggled to understand what was going on with my code. The most difficult part for me was the background tasks and signal handling. I had bad coding practices as I continually would break something I had done previously with 'temporary fixes'. I'm happy with my final code as all major commands work. I found some bugs with how I handled the HOME directory, but the cd command still works correctly. The only thing I am still unsure about is the 'sleep' command, I saw it used in task 10 example but it was not mentioned elsewhere.
+## Results & Reflection
+The project was much harder than the last one so I did not manage my time well enough. I believe I have a memory leak but I have never been taught how to troubleshoot that. My code does work and it accurately sorts, I just ran into the problem of getting AddressSanitizer:DEADLYSIGNAL and had to figure it out on my own. I am glad that the entire implementation of the mergesort wasnt up to us, as half of it was given in the handout. However I am proud that I got all of the unit tests passing, for the longest time I was one number away from the array being fully sorted. If I had extra time I would find the memory bug hiding in my project, however I've been looking for over a day now and my time has run out. Also I didn't use any AI tools to help debug. Well I tried but they couldn't find it either!

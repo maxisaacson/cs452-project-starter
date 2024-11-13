@@ -181,10 +181,10 @@ void mergesort_mt(int *A, int n, int num_threads) {
     }
 
     // Iteratively merge sorted chunks across the entire array
-    int current_size = 1;
+    int current_size = 1; //changed to 1 temporarily
     while (current_size < n) {
         for (int left = 0; left < n; left += 2 * current_size) {
-            int mid = min(left + current_size - 1, n - 1);
+            int mid = min(left + current_size - 1, n - 1); //adding min() on here fixed test 3
             int right = min(left + 2 * current_size - 1, n - 1);
             if (mid < right) {
                 merge_s(A, left, mid, right);
