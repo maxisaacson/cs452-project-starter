@@ -1,63 +1,82 @@
 #ifndef LAB_H
 #define LAB_H
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/types.h>
-#include <termios.h>
-#include <unistd.h>
-#include <limits.h>
-
-#define ARG_MAX 64
-#define MAX_JOBS 64
-#define lab_VERSION_MAJOR 1
-#define lab_VERSION_MINOR 0
-#define UNUSED(x) (void)x;
+#include <pthread.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-struct job {
-    int job_id;      // Add this line
-    pid_t pid;
-    char command[ARG_MAX];
-    bool finished;
-    int status;
+#define INSERTION_SORT_THRESHOLD 2
+#define MAX_THREADS 32
+
+/**
+ * @brief Sorts an array of ints into ascending order using the constant
+ * INSERTION_SORT_THRESHOLD internally
+ *
+ * @param A A pointer to the start of the array
+ * @param p The starting index
+ * @param r The ending index
+ */
+void mergesort_s(int *A, int p, int r);
+
+/**
+ * @brief Merge two sorted sequences A[p..q] and A[q+1..r] and place merged
+ *              output back in array A. Uses extra space proportional to
+ *              A[p..r].
+ *
+ * @param A The array to merge into
+ * @param p The starting index of the first half
+ * @param q The middle
+ * @param r The ending index of the second half
+ */
+void merge_s(int A[], int p, int q, int r);
+
+/**
+ * @brief Sorts an array of ints into ascending order using multiple threads
+ *
+ * @param A A pointer to the start of the array
+ * @param n The size of the array
+ * @param num_threads The number of threads to use.
+ */
+void mergesort_mt(int *A, int n, int num_threads);
+
+/**
+ * @brief Returns the current time as milliseconds
+ * @return the number of milliseconds
+ */
+double getMilliSeconds();
+
+/**
+ * @brief Represents a chunk of the array to be sorted by a thread
+ *
+ */
+struct parallel_args {
+    int *A;
+    int start;
+    int end;
+    pthread_t tid;
 };
 
+/**
+ * @brief The function that is called by each thread to sort their chunk
+ *
+ * @param args see struct parallel_args
+ * @return void* always NULL
+ */
+void *parallel_mergesort(void *args);
 
-
-  struct shell {
-    int shell_is_interactive;
-    pid_t shell_pgid;
-    struct termios shell_tmodes;
-    int shell_terminal;
-    char *prompt;
-  };
-
-  char *get_prompt(const char *env);
-  int change_dir(char **dir);
-  char **cmd_parse(char const *line);
-  void cmd_free(char **line);
-  char *trim_white(char *line);
-  bool do_builtin(struct shell *sh, char **argv);
-  void sh_init(struct shell *sh);
-  void sh_destroy(struct shell *sh);
-  void parse_args(int argc, char **argv);
-  void handle_signals();
-  void handle_history();
-  void execute_command(char *command);
-  
-  // Job control functions
-  void add_job(pid_t pid, const char *command);
-  void update_jobs();
-  void print_jobs();
-  void print_version();
+/**
+ * @brief Entry point for the main function
+ *
+ * @param argc The argument count
+ * @param argv The argument array
+ * @return The exit code
+ */
+int myMain(int argc, char **argv);
 
 #ifdef __cplusplus
-} // extern "C"
+}
 #endif
 
-#endif // LAB_H
+#endif
